@@ -1,7 +1,6 @@
 
-# Project Name
+# MERN Stack Coding Challenge App
 
-Short description or introduction to your project.
 
 ## Table of Contents
 
