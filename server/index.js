@@ -1,4 +1,3 @@
-// server.js
 
 const express = require('express');
 const axios = require('axios');
@@ -8,15 +7,14 @@ const cors = require("cors")
 const moment = require('moment');
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+require('dotenv').config()
 // Connect to MongoDB database
-mongoose.connect('mongodb+srv://lokesh:lokeshcz@cluster0.dsoakmx.mongodb.net/transaction?retryWrites=true&w=majority', {
+mongoose.connect(process.env.MONGODB_URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
 const db = mongoose.connection;
 
-// Define transaction schema and model
 const transactionSchema = new mongoose.Schema({
     id: Number,
     title: String,
@@ -30,10 +28,10 @@ const transactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
-// Middleware
 app.use(bodyParser.json());
 app.use(cors())
-// Initialize database with seed data from third-party API
+
+
 app.get('/initialize-database', async (req, res) => {
     try {
         const response = await axios.get('https://s3.amazonaws.com/roxiler.com/product_transaction.json');
@@ -49,14 +47,12 @@ app.get('/transactions', async (req, res) => {
     try {
         let { search, page, perPage, month } = req.query;
 
-        // Set default values for pagination
         page = parseInt(page) || 1;
         perPage = parseInt(perPage) || 10;
 
-        // Prepare search query
+
         let searchQuery = {};
 
-        // If search parameter is provided, construct search query based on it
         if (search) {
             const price = parseFloat(search);
             if (!isNaN(price)) {
@@ -76,8 +72,6 @@ app.get('/transactions', async (req, res) => {
                 };
             }
         }
-
-        // If month parameter is provided, add it to the search query
         if (month) {
             const selectedMonth = parseInt(month);
             if (!isNaN(selectedMonth) && selectedMonth >= 1 && selectedMonth <= 12) {
@@ -89,10 +83,7 @@ app.get('/transactions', async (req, res) => {
                 };
             }
         }
-        // Get total count of filtered transactions
         const totalCount = await Transaction.countDocuments(searchQuery);
-
-        // Perform pagination and retrieve transactions from MongoDB
         const paginatedTransactions = await Transaction.find(searchQuery)
             .skip((page - 1) * perPage)
             .limit(perPage);
@@ -104,7 +95,7 @@ app.get('/transactions', async (req, res) => {
             transactions: paginatedTransactions
         });
     } catch (err) {
-        console.error('Error occurred while fetching transactions', err);
+        console.error('Error', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -113,22 +104,17 @@ app.get('/statistics', async (req, res) => {
     try {
         const { month } = req.query;
 
-        // Convert the month parameter to an integer
-        const selectedMonth = parseInt(month);
 
-        // Fetch data for the selected month across all years
+        const selectedMonth = parseInt(month);
         const dataForSelectedMonth = await Transaction.find({
             $expr: {
                 $eq: [{ $month: "$dateOfSale" }, selectedMonth]
             }
         });
-
-        // Calculate statistics
         const totalSaleAmount = dataForSelectedMonth.reduce((acc, curr) => acc + curr.price, 0);
         const totalSoldItems = dataForSelectedMonth.filter(item => item.sold).length;
         const totalUnsoldItems = dataForSelectedMonth.length - totalSoldItems;
 
-        // Prepare response
         const statistics = {
             totalSaleAmount,
             totalSoldItems,
@@ -137,7 +123,7 @@ app.get('/statistics', async (req, res) => {
 
         res.json(statistics);
     } catch (err) {
-        console.error('Error occurred while fetching statistics', err);
+        console.error('Error', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -227,11 +213,9 @@ app.get('/pie-chart', async (req, res) => {
 });
 
 
-// Initialize database on server start
 db.once('open', () => {
     console.log('Connected to database');
-    // Uncomment below line to initialize database on server start
-    // initializeDatabase();
+
 });
 
 // Start server
