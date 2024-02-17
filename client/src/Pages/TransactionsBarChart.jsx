@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from 'react';
-import { Select, Box, Text ,Code} from '@chakra-ui/react';
+import { Select, Box, Text, Code } from '@chakra-ui/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import axios from 'axios';
 
@@ -7,12 +7,16 @@ const TransactionsBarChart = () => {
     const [selectedMonth, setSelectedMonth] = useState('03');
     const [chartData, setChartData] = useState([]);
 
+    const [loading, setLoading] = useState(true);
+
     const fetchChartData = async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/bar-chart?month=${selectedMonth}`);
+            const response = await axios.get(`https://smoggy-fawn-swimsuit.cyclic.app/bar-chart?month=${selectedMonth}`);
             setChartData(Object.entries(response.data).map(([range, count]) => ({ range, count })));
+            setLoading(false)
         } catch (error) {
             console.error('Error', error);
+            setLoading(false)
         }
     };
 
@@ -21,7 +25,10 @@ const TransactionsBarChart = () => {
             fetchChartData();
         }
     }, [selectedMonth]);
-
+    
+    if (loading) {
+        return <h3>Loading....</h3>
+    }
     return (
         <Box
             display={{ base: 'flex', md: 'flex' }}
@@ -32,7 +39,7 @@ const TransactionsBarChart = () => {
             margin={"auto"}
             mt="12"
         >
-           
+
             <Select
                 placeholder="Select month"
                 value={selectedMonth}
@@ -52,7 +59,7 @@ const TransactionsBarChart = () => {
                 <option value="12">December</option>
             </Select>
             <Box mt={4}>
-            <Code colorScheme='green' style={{ padding: "20px", textAlign: "center" }}>Transactions Bar Char :{selectedMonth}</Code>
+                <Code colorScheme='green' style={{ padding: "20px", textAlign: "center" }}>Transactions Bar Char :{selectedMonth}</Code>
                 <BarChart width={800} height={400} data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="range" />

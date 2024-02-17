@@ -6,11 +6,13 @@ import axios from 'axios';
 const TransactionsPieChart = () => {
     const [selectedMonth, setSelectedMonth] = useState('03');
     const [pieData, setPieData] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const fetchPieData = async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/pie-chart?month=${selectedMonth}`);
+            const response = await axios.get(`https://smoggy-fawn-swimsuit.cyclic.app/pie-chart?month=${selectedMonth}`);
             setPieData(Object.entries(response.data).map(([category, count]) => ({ name: category, value: count })));
+            setLoading(false)
         } catch (error) {
             console.error('Error fetching pie chart data:', error);
         }
@@ -21,7 +23,9 @@ const TransactionsPieChart = () => {
             fetchPieData();
         }
     }, [selectedMonth]);
-
+    if (loading) {
+        return <h3>Loading....</h3>
+    }
     return (
         <Box display={{ base: 'flex', md: 'flex' }}
             flexDirection={{ base: 'column', md: 'row' }}

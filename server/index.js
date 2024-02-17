@@ -1,4 +1,14 @@
 
+
+/* 
+
+
+This is the DBS of the application and I haven't created any complex data that I don't want
+I am using this simple file to create for server.
+
+*/
+
+
 const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
@@ -8,7 +18,7 @@ const moment = require('moment');
 const app = express();
 const PORT = process.env.PORT || 5000;
 require('dotenv').config()
-// Connect to MongoDB database
+
 mongoose.connect(process.env.MONGODB_URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -32,31 +42,31 @@ app.use(bodyParser.json());
 app.use(cors())
 
 
-app.get('/initialize-database', async (req, res) => {
+app.get('/initialize', async (req, res) => {
     try {
         const response = await axios.get('https://s3.amazonaws.com/roxiler.com/product_transaction.json');
-        const transactions = response.data;
-        await Transaction.insertMany(transactions);
+        const data = response.data;
+        await Transaction.insertMany(data);
         res.status(200).json({ message: 'Database initialized successfully' });
     } catch (error) {
-        console.error('Error initializing database:', error);
-        res.status(500).json({ error: 'An error occurred while initializing the database' });
+        res.status(500).json({ error: 'while initializing the database' });
     }
 });
+
 app.get('/transactions', async (req, res) => {
     try {
         let { search, page, perPage, month } = req.query;
 
-        page = parseInt(page) || 1;
-        perPage = parseInt(perPage) || 10;
+        page = +page || 1;
+        perPage = +perPage || 10;
 
 
-        let searchQuery = {};
+        let UserQuery = {};
 
         if (search) {
             const price = parseFloat(search);
             if (!isNaN(price)) {
-                searchQuery = {
+                UserQuery = {
                     $or: [
                         { title: { $regex: search, $options: 'i' } },
                         { description: { $regex: search, $options: 'i' } },
@@ -64,7 +74,7 @@ app.get('/transactions', async (req, res) => {
                     ]
                 };
             } else {
-                searchQuery = {
+                UserQuery = {
                     $or: [
                         { title: { $regex: search, $options: 'i' } },
                         { description: { $regex: search, $options: 'i' } }
@@ -73,26 +83,26 @@ app.get('/transactions', async (req, res) => {
             }
         }
         if (month) {
-            const selectedMonth = parseInt(month);
-            if (!isNaN(selectedMonth) && selectedMonth >= 1 && selectedMonth <= 12) {
-                searchQuery = {
-                    ...searchQuery,
+            const currentMonth = +month;
+            if (!isNaN(currentMonth) && currentMonth >= 1 && currentMonth <= 12) {
+                UserQuery = {
+                    ...UserQuery,
                     $expr: {
-                        $eq: [{ $month: "$dateOfSale" }, selectedMonth]
+                        $eq: [{ $month: "$dateOfSale" }, currentMonth]
                     }
                 };
             }
         }
-        const totalCount = await Transaction.countDocuments(searchQuery);
-        const paginatedTransactions = await Transaction.find(searchQuery)
+        const totalTransaction = await Transaction.countDocuments(UserQuery);
+        const pagination = await Transaction.find(UserQuery)
             .skip((page - 1) * perPage)
             .limit(perPage);
 
         res.json({
-            total: totalCount,
+            total: totalTransaction,
             page,
             perPage,
-            transactions: paginatedTransactions
+            transactions: pagination
         });
     } catch (err) {
         console.error('Error', err);
@@ -103,22 +113,20 @@ app.get('/transactions', async (req, res) => {
 app.get('/statistics', async (req, res) => {
     try {
         const { month } = req.query;
-
-
-        const selectedMonth = parseInt(month);
-        const dataForSelectedMonth = await Transaction.find({
+        const currentMonth = +month;
+        const data = await Transaction.find({
             $expr: {
-                $eq: [{ $month: "$dateOfSale" }, selectedMonth]
+                $eq: [{ $month: "$dateOfSale" }, currentMonth]
             }
         });
-        const totalSaleAmount = dataForSelectedMonth.reduce((acc, curr) => acc + curr.price, 0);
-        const totalSoldItems = dataForSelectedMonth.filter(item => item.sold).length;
-        const totalUnsoldItems = dataForSelectedMonth.length - totalSoldItems;
+        const SaleAmount = data.reduce((acc, curr) => acc + curr.price, 0);
+        const SoldItems = data.filter(item => item.sold).length;
+        const UnsoldItems = data.length - SoldItems;
 
         const statistics = {
-            totalSaleAmount,
-            totalSoldItems,
-            totalUnsoldItems
+            SaleAmount,
+            SoldItems,
+            UnsoldItems
         };
 
         res.json(statistics);
@@ -133,19 +141,13 @@ app.get('/statistics', async (req, res) => {
 app.get('/bar-chart', async (req, res) => {
     try {
         const { month } = req.query;
-
-        // Convert the month parameter to an integer
-        const selectedMonth = parseInt(month);
-
-        // Fetch data for the selected month across all years
-        const dataForSelectedMonth = await Transaction.find({
+        const currentMonth = +month;
+        const data = await Transaction.find({
             $expr: {
-                $eq: [{ $month: "$dateOfSale" }, selectedMonth]
+                $eq: [{ $month: "$dateOfSale" }, currentMonth]
             }
         });
-
-        // Calculate price ranges and count of items falling within each range
-        const barChartData = {
+        const barData = {
             "0 - 100": 0,
             "101 - 200": 0,
             "201 - 300": 0,
@@ -157,24 +159,21 @@ app.get('/bar-chart', async (req, res) => {
             "801 - 900": 0,
             "901-above": 0
         };
-
-        dataForSelectedMonth.forEach(transaction => {
-            const price = transaction.price;
-            if (price <= 100) barChartData["0 - 100"]++;
-            else if (price <= 200) barChartData["101 - 200"]++;
-            else if (price <= 300) barChartData["201 - 300"]++;
-            else if (price <= 400) barChartData["301 - 400"]++;
-            else if (price <= 500) barChartData["401 - 500"]++;
-            else if (price <= 600) barChartData["501 - 600"]++;
-            else if (price <= 700) barChartData["601 - 700"]++;
-            else if (price <= 800) barChartData["701 - 800"]++;
-            else if (price <= 900) barChartData["801 - 900"]++;
-            else barChartData["901-above"]++;
+        data.forEach(elements => {
+            const price = elements.price;
+            if (price <= 100) barData["0 - 100"]++;
+            else if (price <= 200) barData["101 - 200"]++;
+            else if (price <= 300) barData["201 - 300"]++;
+            else if (price <= 400) barData["301 - 400"]++;
+            else if (price <= 500) barData["401 - 500"]++;
+            else if (price <= 600) barData["501 - 600"]++;
+            else if (price <= 700) barData["601 - 700"]++;
+            else if (price <= 800) barData["701 - 800"]++;
+            else if (price <= 900) barData["801 - 900"]++;
+            else barData["901-above"]++;
         });
-
-        res.json(barChartData);
+        res.json(barData);
     } catch (err) {
-        console.error('Error occurred while fetching bar chart data', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -183,31 +182,24 @@ app.get('/bar-chart', async (req, res) => {
 app.get('/pie-chart', async (req, res) => {
     try {
         const { month } = req.query;
-
-        // Convert the month parameter to an integer
-        const selectedMonth = parseInt(month);
-
-        // Fetch data for the selected month across all years
-        const dataForSelectedMonth = await Transaction.find({
+        const currentMonth = +month;
+        const data = await Transaction.find({
             $expr: {
-                $eq: [{ $month: "$dateOfSale" }, selectedMonth]
+                $eq: [{ $month: "$dateOfSale" }, currentMonth]
             }
         });
-
-        // Calculate count of items for each category
-        const categoryCounts = {};
-        dataForSelectedMonth.forEach(transaction => {
-            const category = transaction.category;
-            if (!categoryCounts[category]) {
-                categoryCounts[category] = 1;
+        const category = {};
+        data.forEach(element => {
+            const category = element.category;
+            if (!category[category]) {
+                category[category] = 1;
             } else {
-                categoryCounts[category]++;
+                category[category]++;
             }
         });
 
-        res.json(categoryCounts);
+        res.json(category);
     } catch (err) {
-        console.error('Error occurred while fetching pie chart data', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -218,7 +210,6 @@ db.once('open', () => {
 
 });
 
-// Start server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

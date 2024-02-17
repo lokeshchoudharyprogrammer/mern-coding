@@ -5,11 +5,13 @@ import axios from 'axios';
 const TransactionsStatistics = () => {
     const [selectedMonth, setSelectedMonth] = useState('03');
     const [statistics, setStatistics] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const fetchStatistics = async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/statistics?month=${selectedMonth}`);
+            const response = await axios.get(`https://smoggy-fawn-swimsuit.cyclic.app/statistics?month=${selectedMonth}`);
             setStatistics(response.data);
+            setLoading(false)
         } catch (error) {
             console.error('Error fetching statistics:', error);
         }
@@ -20,7 +22,9 @@ const TransactionsStatistics = () => {
             fetchStatistics();
         }
     }, [selectedMonth]);
-
+    if (loading) {
+        return <h3>Loading....</h3>
+    }
     return (
 
         <Box

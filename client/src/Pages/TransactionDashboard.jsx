@@ -31,7 +31,7 @@ const TransactionDashboard = () => {
     const fetchTransactions = async () => {
 
         try {
-            const response = await axios.get(`http://localhost:5000/transactions?search=${searchTerm ? searchTerm : ""}&page=${currentPage}&perPage=${ITEMS_PER_PAGE}${selectedMonth ? `&month=${selectedMonth}` : ""}`);
+            const response = await axios.get(`https://smoggy-fawn-swimsuit.cyclic.app/transactions?search=${searchTerm ? searchTerm : ""}&page=${currentPage}&perPage=${ITEMS_PER_PAGE}${selectedMonth ? `&month=${selectedMonth}` : ""}`);
 
             setTransactions(response.data.transactions);
             setTotalTransactions(response.data.total);
@@ -54,8 +54,11 @@ const TransactionDashboard = () => {
         fetchTransactions();
     };
 
-    let btnDisable = currentPage == totalTransactions / ITEMS_PER_PAGE
-    console.log(transactions)
+    let btnDisable = currentPage === totalTransactions / ITEMS_PER_PAGE
+
+    if(loading){
+        return <h3>loading....</h3>
+    }
     return (
         <Box p={4}>
             <Box mb={4} display="flex" justifyContent="space-between">
