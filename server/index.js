@@ -182,23 +182,22 @@ app.get('/bar-chart', async (req, res) => {
 app.get('/pie-chart', async (req, res) => {
     try {
         const { month } = req.query;
-        const currentMonth = +month;
+        const currentMonth = parseInt(month);
+        console.log(month, typeof (currentMonth))
         const data = await Transaction.find({
             $expr: {
                 $eq: [{ $month: "$dateOfSale" }, currentMonth]
             }
         });
-        const category = {};
+
+        const obj = {};
         data.forEach(element => {
-            const category = element.category;
-            if (!category[category]) {
-                category[category] = 1;
-            } else {
-                category[category]++;
-            }
+
+            obj[element["category"]] == undefined ? obj[element["category"]] = 1 : obj[element["category"]]++
+
         });
 
-        res.json(category);
+        res.json(obj);
     } catch (err) {
         res.status(500).json({ error: 'Internal server error' });
     }

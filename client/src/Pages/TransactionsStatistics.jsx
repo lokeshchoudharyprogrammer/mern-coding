@@ -10,7 +10,7 @@ const TransactionsStatistics = () => {
     const fetchStatistics = async () => {
         try {
             const response = await axios.get(`https://smoggy-fawn-swimsuit.cyclic.app/statistics?month=${selectedMonth}`);
-            setStatistics(response.data);
+            setStatistics(response);
             setLoading(false)
         } catch (error) {
             console.error('Error fetching statistics:', error);
@@ -25,6 +25,9 @@ const TransactionsStatistics = () => {
     if (loading) {
         return <h3>Loading....</h3>
     }
+    
+    let obj = statistics.data
+    
     return (
 
         <Box
@@ -59,15 +62,15 @@ const TransactionsStatistics = () => {
 
             {statistics && (
                 <Box mt={4} p={4} borderWidth="1px" borderRadius="md">
-
-                    <Code colorScheme='green'>Total sale items: {statistics.totalSaleAmount}</Code>
-                    <br />
-                    <br />
-                    <Code colorScheme='green'>Total sold items: {statistics.totalSoldItems}</Code>
-                    <br />
-                    <br />
-                    <Code colorScheme='yellow'>Total unsold items: {statistics.totalUnsoldItems}</Code>
-
+                    {Object.keys(obj).map(k => (
+                        <>
+                            <Code colorScheme='green' key={k}>
+                                {k}: {obj[k]}
+                            </Code>
+                            <br />
+                            <br />
+                        </>
+                    ))}
                 </Box>
             )}
         </Box>
